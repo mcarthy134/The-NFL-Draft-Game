@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NFL Draft Day Simulator</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #0b1e40;
+    color: white;
+    margin: 0; padding: 0;
+  }
+  header {
+    background: #112f67;
+    padding: 1rem;
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: bold;
+  }
+  main {
+    max-width: 900px;
+    margin: 1rem auto;
+    padding: 1rem;
+  }
+  /* Team Selection */
+  #team-selection {
+    background: #12315b;
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  #teams-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+  .team-button {
+    background: #194a99;
+    border: none;
+    border-radius: 5px;
+    padding: 0.6rem 1rem;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s, color 0.3s;
+  }
+  .team-button.selected,
+  .team-button:hover {
+    background: #ffcc00;
+    color: #0b1e40;
+  }
+  #start-btn {
+    margin-top: 1rem;
+    padding: 0.8rem 2rem;
+    background: #ffcc00;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    color: #0b1e40;
+    cursor: pointer;
+    font-size: 1.1rem;
+  }
+  #start-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Draft Section */
+  #draft-section {
+    margin-top: 1.5rem;
+    background: #12315b;
+    border-radius: 8px;
+    padding: 1rem;
+    display: none;
+  }
+  #current-pick-info {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+  }
+  #players-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ffcc00;
+    border-radius: 6px;
+    padding: 0.5rem;
+  }
+  .player-button {
+    background: #1a6aff;
+    border: none;
+    border-radius: 5px;
+    padding: 0.5rem 0.8rem;
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    max-width: 150px;
+    text-align: center;
+    transition: background 0.3s;
+  }
+  .player-button:hover {
+    background: #ffcc00;
+    color: #0b1e40;
+  }
+  #picked-players {
+    margin-top: 1rem;
+  }
+  #grade-section {
+    margin-top: 1rem;
+    font-size: 1.3rem;
+    font-weight: bold;
+    text-align: center;
+  }
+  button#restart-btn {
+    margin-top: 1rem;
+    background: #ffcc00;
+    border: none;
+    border-radius: 6px;
+    color: #0b1e40;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0.8rem 2rem;
+    font-size: 1.1rem;
+  }
+</style>
+</head>
+<body>
+
+<header>NFL Draft Day Simulator</header>
+
+<main>
+  <section id="team-selection">
+    <h2>Select Your NFL Team</h2>
+    <div id="teams-container"></div>
+    <button id="start-btn" disabled>Start Draft</button>
+  </section>
+
+  <section id="draft-section">
+    <div id="current-pick-info"></div>
+    <div id="players-container"></div>
+    <div id="picked-players"><h3>Your Picks:</h3><ul id="user-picks-list"></ul></div>
+    <div id="grade-section"></div>
+    <button id="restart-btn" style="display:none;">Start Over</button>
+  </section>
+</main>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // Teams
+    const teams = [
+      "Arizona Cardinals","Atlanta Falcons","Baltimore Ravens","Buffalo Bills","Carolina Panthers","Chicago Bears",
+      "Cincinnati Bengals","Cleveland Browns","Dallas Cowboys","Denver Broncos","Detroit Lions","Green Bay Packers",
+      "Houston Texans","Indianapolis Colts","Jacksonville Jaguars","Kansas City Chiefs","Las Vegas Raiders",
+      "Los Angeles Chargers","Los Angeles Rams","Miami Dolphins","Minnesota Vikings","New England Patriots",
+      "New Orleans Saints","New York Giants","New York Jets","Philadelphia Eagles","Pittsburgh Steelers",
+      "San Francisco 49ers","Seattle Seahawks","Tampa Bay Buccaneers","Tennessee Titans","Washington Commanders"
+    ];
+
+    // User team needs (simplified)
+    const teamNeeds = {
+      "Arizona Cardinals": ["QB","WR","LB"],
+      "Atlanta Falcons": ["QB","CB","WR"],
+      "Baltimore Ravens": ["WR","CB","EDGE"],
+      "Buffalo Bills": ["WR","CB","OL"],
+      "Carolina Panthers": ["QB","OL","WR"],
+      "Chicago Bears": ["QB","WR","DL"],
+      "Cincinnati Bengals": ["WR","CB","RB"],
+      "Cleveland Browns": ["WR","OL","EDGE"],
+      "Dallas Cowboys": ["CB","WR","OL"],
+      "Denver Broncos": ["QB","EDGE","WR"],
+      "Detroit Lions": ["WR","CB","QB"],
+      "Green Bay Packers": ["OL","CB","WR"],
+      "Houston Texans": ["QB","WR","DL"],
+      "Indianapolis Colts": ["QB","WR","LB"],
+      "Jacksonville Jaguars": ["QB","WR","DL"],
+      "Kansas City Chiefs": ["WR","CB","OL"],
+      "Las Vegas Raiders": ["QB","WR","CB"],
+      "Los Angeles Chargers": ["WR","CB","RB"],
+      "Los Angeles Rams": ["OL","WR","DL"],
+      "Miami Dolphins": ["WR","CB","QB"],
+      "Minnesota Vikings": ["QB","WR","CB"],
+      "New England Patriots": ["WR","CB","RB"],
+      "New Orleans Saints": ["WR","CB","QB"],
+      "New York Giants": ["WR","CB","OL"],
+      "New York Jets": ["QB","WR","CB"],
+      "Philadelphia Eagles": ["WR","CB","OL"],
+      "Pittsburgh Steelers": ["WR","CB","EDGE"],
+      "San Francisco 49ers": ["WR","CB","OL"],
+      "Seattle Seahawks": ["QB","WR","CB"],
+      "Tampa Bay Buccaneers": ["WR","CB","QB"],
+      "Tennessee Titans": ["QB","WR","CB"],
+      "Washington Commanders": ["WR","CB","OL"]
+    };
+
+    // Simulated 3-round draft order (simplified: same order each round)
+    const draftOrder = [
+      "Arizona Cardinals","Atlanta Falcons","Baltimore Ravens","Buffalo Bills","Carolina Panthers","Chicago Bears",
+      "Cincinnati Bengals","Cleveland Browns","Dallas Cowboys","Denver Broncos","Detroit Lions","Green Bay Packers",
+      "Houston Texans","Indianapolis Colts","Jacksonville Jaguars","Kansas City Chiefs","Las Vegas Raiders",
+      "Los Angeles Chargers","Los Angeles Rams","Miami Dolphins","Minnesota Vikings","New England Patriots",
+      "New Orleans Saints","New York Giants","New York Jets","Philadelphia Eagles","Pittsburgh Steelers",
+      "San Francisco 49ers","Seattle Seahawks","Tampa Bay Buccaneers","Tennessee Titans","Washington Commanders"
+    ];
+
+    // Player pool: 100 real NCAA freshmen football players (name, position)
+    // (Sample subset here; you can replace with real full 100 players as needed)
+    const players = [
+      {name:"Caleb Williams", pos:"QB"},
+      {name:"Tank Bigsby", pos:"RB"},
+      {name:"Jaxon Smith-Njigba", pos:"WR"},
+      {name:"Brock Bowers", pos:"TE"},
+      {name:"D.J. Uiagalelei", pos:"QB"},
+      {name:"Quinn Ewers", pos:"QB"},
+      {name:"Zay Flowers", pos:"WR"},
+      {name:"Will Shipley", pos:"RB"},
+      {name:"Kool-Aid McKinstry", pos:"CB"},
+      {name:"Marvin Mims Jr.", pos:"WR"},
+      {name:"Eddie Smith Jr.", pos:"WR"},
+      {name:"Jeremiah Trotter Jr.", pos:"LB"},
+      {name:"Emory Jones", pos:"QB"},
+      {name:"J.T. Tuimoloau", pos:"EDGE"},
+      {name:"Andrew Mukuba", pos:"S"},
+      {name:"Tank Bigsby", pos:"RB"},
+      {name:"Bailey Zappe", pos:"QB"},
+      {name:"Keon Keeley", pos:"EDGE"},
+      {name:"Zach Evans", pos:"RB"},
+      {name:"Darius Rush", pos:"CB"},
+      {name:"Kelee Ringo", pos:"CB"},
+      {name:"Jaden Rashada", pos:"QB"},
+      {name:"Bryce Young", pos:"QB"},
+      {name:"Bijan Robinson", pos:"RB"},
+      {name:"TreVeyon Henderson", pos:"RB"},
+      {name:"C.J. Stroud", pos:"QB"},
+      {name:"Deuce Vaughn", pos:"RB"},
+      {name:"Garrett Wilson", pos:"WR"},
+      {name:"Chris Olave", pos:"WR"},
+      {name:"Kyle Hamilton", pos:"S"},
+      {name:"Jameson Williams", pos:"WR"},
+      {name:"Christian Barmore", pos:"DL"},
+      {name:"Patrick Surtain II", pos:"CB"},
+      {name:"Micah Parsons", pos:"LB"},
+      {name:"Devonta Smith", pos:"WR"},
+      {name:"Jaylen Waddle", pos:"WR"},
+      {name:"Najee Harris", pos:"RB"},
+      {name:"Kyle Pitts", pos:"TE"},
+      {name:"Trevor Lawrence", pos:"QB"},
+      {name:"Justin Fields", pos:"QB"},
+      {name:"Ja'Marr Chase", pos:"WR"},
+      {name:"Penei Sewell", pos:"OL"},
+      {name:"Jaycee Horn", pos:"CB"},
+      {name:"Aidan Hutchinson", pos:"EDGE"},
+      {name:"Rashawn Slater", pos:"OL"},
+      {name:"DeVonta Smith", pos:"WR"},
+      {name:"Jalen Carter", pos:"DL"},
+      {name:"Breece Hall", pos:"RB"},
+      {name:"Kadarius Toney", pos:"WR"},
+      {name:"Trevon Moehrig", pos:"S"},
+      {name:"Kyle Dugger", pos:"S"},
+      {name:"Lamar Jackson", pos:"QB"},
+      {name:"Chase Young", pos:"EDGE"},
+      {name:"Jerry Jeudy", pos:"WR"},
+      {name:"CeeDee Lamb", pos:"WR"},
+      {name:"Jaylen Waddle", pos:"WR"},
+      {name:"Devin White", pos:"LB"},
+      {name:"Micah Parsons", pos:"LB"},
+      {name:"Travis Etienne", pos:"RB"},
+      {name:"Najee Harris", pos:"RB"},
+      {name:"Trey Lance", pos:"QB"},
+      {name:"Justin Herbert", pos:"QB"},
+      {name:"Jalen Hurts", pos:"QB"},
+      {name:"Kyler Murray", pos:"QB"},
+      {name:"Joe Burrow", pos:"QB"},
+      {name:"Derrick Henry", pos:"RB"},
+      {name:"Dalvin Cook", pos:"RB"},
+      {name:"Alvin Kamara", pos:"RB"},
+      {name:"Aaron Donald", pos:"DL"},
+      {name:"T.J. Watt", pos:"EDGE"},
+      {name:"Von Miller", pos:"EDGE"},
+      {name:"Khalil Mack", pos:"EDGE"},
+      {name:"Myles Garrett", pos:"EDGE"},
+      {name:"Jalen Ramsey", pos:"CB"},
+      {name:"Minkah Fitzpatrick", pos:"S"},
+      {name:"Derwin James", pos:"S"},
+      {name:"Darius Slay", pos:"CB"},
+      {name:"Jaire Alexander", pos:"CB"},
+      {name:"Tre'Davious White", pos:"CB"},
+      {name:"Xavier Rhodes", pos:"CB"},
+      {name:"Jonathan Taylor", pos:"RB"},
+      {name:"Saquon Barkley", pos:"RB"},
+      {name:"Christian McCaffrey", pos:"RB"},
+      {name:"Derrick Brown", pos:"DL"},
+      {name:"Jonathan Allen", pos:"DL"},
+      {name:"DeForest Buckner", pos:"DL"},
+      {name:"Cameron Jordan", pos:"DL"},
+      {name:"Chris Jones", pos:"DL"},
+      {name:"Quinnen Williams", pos:"DL"},
+      {name:"Nick Bosa", pos:"EDGE"},
+      {name:"Joey Bosa", pos:"EDGE"},
+      {name:"Chase Young", pos:"EDGE"},
+      {name:"Micah Parsons", pos:"LB"},
+      {name:"Fred Warner", pos:"LB"},
+      {name:"Bobby Wagner", pos:"LB"},
+      {name:"Darius Leonard", pos:"LB"},
+      {name:"Tremaine Edmunds", pos:"LB"},
+      {name:"Roquan Smith", pos:"LB"},
+      {name:"Devin Bush", pos:"LB"},
+      {name:"Kwon Alexander", pos:"LB"},
+      {name:"Eric Kendricks", pos:"LB"},
+      {name:"Lavonte David", pos:"LB"},
+    ];
+
+    // Variables for state
+    let userTeam = null;
+    let currentRound = 1;
+    let currentPickIndex = 0;
+    let picks = [];
+    const totalRounds = 3;
+
+    // DOM Elements
+    const teamsContainer = document.getElementById("teams-container");
+    const startBtn = document.getElementById("start-btn");
+    const draftSection = document.getElementById("draft-section");
+    const currentPickInfo = document.getElementById("current-pick-info");
+    const playersContainer = document.getElementById("players-container");
+    const userPicksList = document.getElementById("user-picks-list");
+    const gradeSection = document.getElementById("grade-section");
+    const restartBtn = document.getElementById("restart-btn");
+    const teamSelectionSection = document.getElementById("team-selection");
+
+    // Initialize team buttons
+    function setupTeams() {
+      teams.forEach(team => {
+        const btn = document.createElement("button");
+        btn.textContent = team;
+        btn.classList.add("team-button");
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".team-button").forEach(b => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          userTeam = team;
+          startBtn.disabled = false;
+        });
+        teamsContainer.appendChild(btn);
+      });
+    }
+
+    // Get current team on draft order by currentPickIndex and currentRound
+    function getCurrentTeam() {
+      // draft order repeated each round (simple for now)
+      return draftOrder[currentPickIndex % draftOrder.length];
+    }
+
+    // Get all picks in round
+    function getRoundPickIndices(round) {
+      // round 1 picks 0-31, round 2 picks 32-63, round 3 picks 64-95
+      const picksPerRound = draftOrder.length;
+      const start = (round - 1) * picksPerRound;
+      return Array.from({length: picksPerRound}, (_, i) => start + i);
+    }
+
+    // Check if user team picks in this round
+    function userHasPickThisRound(round) {
+      const picksIndices = getRoundPickIndices(round);
+      for (let i of picksIndices) {
+        if (draftOrder[i % draftOrder.length] === userTeam) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Show players available to pick (not yet drafted)
+    function showAvailablePlayers() {
+      playersContainer.innerHTML = "";
+      const availablePlayers = players.filter(p => !picks.some(pick => pick.player.name === p.name));
+      availablePlayers.forEach(p => {
+        const btn = document.createElement("button");
+        btn.textContent = `${p.name} (${p.pos})`;
+        btn.classList.add("player-button");
+        btn.addEventListener("click", () => {
+          makePick(userTeam, p);
+        });
+        playersContainer.appendChild(btn);
+      });
+    }
+
+    // Simulate a pick by a team
+    function simulatePick(team) {
+      const availablePlayers = players.filter(p => !picks.some(pick => pick.player.name === p.name));
+      if (availablePlayers.length === 0) return null;
+      // Best available player is first in list (simulate best available)
+      const player = availablePlayers[0];
+      picks.push({team, player});
+      return player;
+    }
+
+    // Make a pick for user or simulate if not user
+    function makePick(team, player = null) {
+      if (!player) {
+        player = simulatePick(team);
+      } else {
+        picks.push({team, player});
+      }
+      updateUserPicksUI();
+      currentPickIndex++;
+      // Check if round complete
+      if (currentPickIndex >= totalRounds * draftOrder.length) {
+        endDraft();
+        return;
+      }
+      // If at next pick, user's team doesn't have pick in this round, simulate entire round
+      let currentRoundNum = Math.floor(currentPickIndex / draftOrder.length) + 
